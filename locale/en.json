@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "MoonBit Static Analysis",
-    "description": "Three-inspection (structural / type / behavior) static analysis for MoonBit-subset programs and state-machine tables, as agent tools."
+    "description": "Three-inspection (structural / type / behavior) static analysis for MoonBit programs, every toolchain file kind (.mbt / .mbtx / .mbti / .mbt.md / .mbtp) and state-machine tables, as agent tools."
   }
 }

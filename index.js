@@ -185,6 +185,54 @@ export function apply(ctx, config) {
 
   ctx.tools.register(
     defineTool({
+      name: 'moonbit_analyze_file',
+      description:
+        'Analyze any MoonBit toolchain file kind by extension, not just program source. Dispatch: .mbt/.mbtx (three-inspection, plus the import block for a .mbtx script), .mbt.md (literate — only the fences the toolchain compiles, i.e. mbt and mbt check; mbt nocheck and a bare moonbit are display-only and skipped, and line numbers are the .md file\'s real lines), .mbti (interface audit: malformed lines, duplicate signatures, unknown type references), .mbtp (proof-file logic lint: string constants in bodies, banned !/iff forms, cross-package calls, lemma without proof_ensure — a lint, not a substitute for moon prove). Use this for interface files, literate docs and proof files; use moonbit_analyze for plain program source.',
+      parameters: {
+        source: {
+          type: 'string',
+          required: true,
+          description: 'Full text of the file to analyze.',
+        },
+        filename: {
+          type: 'string',
+          required: true,
+          description:
+            'The file name; its extension selects the analysis (.mbt, .mbtx, .mbt.md, .mbti, .mbtp).',
+        },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            report: { type: 'string' },
+            count: { type: 'integer' },
+            findings: { type: 'json' },
+          },
+          required: ['report', 'count'],
+        },
+        render: (_args, value) => [{ type: 'text', text: value.report }],
+      },
+      async execute(args, exec) {
+        const reply = await callBridge(
+          projectDir,
+          config,
+          { kind: 'file', source: args.source, filename: args.filename },
+          exec.signal,
+        )
+        return {
+          report: reportText(`file findings (${args.filename})`, reply),
+          count: reply.count,
+          findings: reply.findings,
+        }
+      },
+      timeoutMs: DEFAULT_TIMEOUT_MS,
+    }),
+  )
+
+  ctx.tools.register(
+    defineTool({
       name: 'moonbit_audit',
       description:
         'Audit a state machine through the same three inspections (static state revision): states are bindings, the drive-slot contract, and the course as abstract execution with virtual stacks. Pass machine tables as plain data; returns merged machine defects (dangling endpoints, undeclared triggers, empty or silent blocks, unreachable states, ambiguous drives, stranded course steps).',

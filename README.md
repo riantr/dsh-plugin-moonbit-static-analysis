@@ -9,6 +9,7 @@ DeepSeek Harness 插件包（bundle，npm `@riantr/moonbit-static-analysis-dsh`�
 | 工具 | 作用 | 实现路径 |
 |---|---|---|
 | `moonbit_analyze` | 修订一段 MoonBit 子集程序源码（未定义名、未用绑定、类型错配、死分支、不可达），返回合并报告（位置 / 严重度 / family / lens 并集 / 虚栈） | 生成 `src/jsoncli` 桥 → `kind:"program"` 请求 |
+| `moonbit_analyze_file` | **按扩展名分派**分析工具链的其它文件种类：`.mbt`/`.mbtx`（三鉴 + 脚本 import 块回显）、`.mbt.md`（literate，**只分析会被编译的围栏**，行号对齐到 `.md` 真实行）、`.mbti`（接口审计：畸形行 / 重复签名 / 未知类型引用）、`.mbtp`（证明文件逻辑 lint，**不替代 `moon prove`**） | 同上 → `kind:"file"` 请求 |
 | `moonbit_audit` | 静态状态修订：任意状态机的纯数据 `MachineSpec` 过三鉴（状态即绑定 / 驱动槽契约 / 轨迹虚栈），含歧义驱动（同 `(state, trigger)` 多去向）检查 | 同上 → `kind:"machine"` 请求 |
 | `moonbit_gates` | 跑门禁套件：`moon check` / `moon fmt --check` / `moon test`（analyzer 用 `--target js`；pyroduct 为参考消费方） | 直接生成 `moon` |
 
@@ -30,13 +31,13 @@ config:
 
 ```
 dsh plugin --profile <name> add @riantr/moonbit-static-analysis-dsh
-dsh plugin --profile <name> add @riantr/moonbit-static-analysis-dsh@0.1.3
+dsh plugin --profile <name> add @riantr/moonbit-static-analysis-dsh@0.1.4
 ```
 
 **方式二：GitHub 仓库**——git 地址同样接受（`installBundle` 自带 GitHub 预检）：
 
 ```
-dsh plugin --profile <name> add github:riantr/dsh-plugin-moonbit-static-analysis#v0.1.3
+dsh plugin --profile <name> add github:riantr/dsh-plugin-moonbit-static-analysis#v0.1.4
 dsh plugin --profile <name> add https://github.com/riantr/dsh-plugin-moonbit-static-analysis.git
 ```
 
@@ -59,20 +60,39 @@ plugin_manager action=install_bundle target=<本目录绝对路径>
 
 ## 发布
 
-npm：`npm publish`（public，scope `@riantr`；v0.1.3 起）。GitHub：master + tag v0.1.x 双同步。
+npm：`npm publish`（public，scope `@riantr`；v0.1.4 起，含 `moonbit_analyze_file`）。GitHub：master + tag v0.1.x 双同步。
 
 ## 已验证
 
-- `node --check index.js` ✓
-- 以桩 `defineTool` 端到端运行 `apply()`：注册 3 个工具 ✓
-- `moonbit_analyze` 真跑：`missing(x)` → `UndefinedName` + 虚栈 `in g at main.mbt:1` ✓
+- `npm test`（`test-register.mjs` + `test-bridge.mjs`，两者都不进发布 tarball）✓
+- `node --check index.js` / `node --check test-bridge.mjs` ✓
+- 以桩 `defineTool` 端到端运行 `apply()`：注册 4 个工具，且**不多不少**（`test-register.mjs`
+  用一个 `node:module` resolve hook 把 `@deepseek-ai/dsh-tools` 换成 identity 桩，
+  因此不需要宿主就能跑真实的 `apply()`）✓
+- `test-bridge.mjs`：7/7 桥接用例全过（覆盖 `kind:"program"` 与 `kind:"file"` 的每条分派）✓
+  - `missing(x)` → `UndefinedName` + 虚栈 `in g at main.mbt:1` ✓
+  - `.mbtx`：import 块按 `"path" @alias *` 原样回显，正文缺陷同时报出 ✓
+  - `.mbti`：未知类型引用报出；一份**真实生成**的 `.mbti`（含 `pub let` / `suberror` /
+    `#deprecated` / `impl ... for` / `noraise cancel` / `const` / `using`）零误报 ✓
+  - `.mbt.md`：编译围栏里的未定义名报出，`mbt nocheck` 与裸 `moonbit` 展示块被跳过 ✓
 - `moonbit_audit` 真跑：歧义驱动 `('b' vs 'c')` + `step(c, act) blocks without a reason` ✓
-- `moonbit_gates suite=analyzer`：check / fmt --check / test 21/21 全 exit 0；首轮还如实报出未格式化的
+- `moonbit_gates suite=analyzer`：check / fmt --check / test 51/51 全 exit 0；首轮还如实报出未格式化的
   `src/jsoncli/main.mbt`（随后 `moon fmt` 修复）——失败路径同样经过验证 ✓
+
+## 测试
+
+```console
+npm test        # 桩宿主跑 apply() 注册检查 + 7 条桥接往返用例
+```
+
+`test-register.mjs` 用 `node:module` 的 resolve hook 把 `@deepseek-ai/dsh-tools` 换成
+identity 桩，于是真实的 `apply()` 能在裸 Node 里执行——注册的工具名与数量都被断言。
+`test-bridge.mjs` 直接打真实的 `jsoncli` 桥，每种文件种类各一条用例，外加一条用**真实
+生成**的 `.mbti` 验证零误报。两者都在 `files` 白名单之外，不进发布 tarball。
 
 ## 关系
 
 - 模块侧前置：`src/jsoncli`（本工作区 `moonbit_static_analysis/src/jsoncli/`，随模块发布）。
 - 本地技能：`moonbit_static_analysis/.dsh/skills/moonbit-static-analysis/SKILL.md`（给 agent 的用法约定，与此插件互补）。
-- mooncakes 技能：`src/cli/SKILL.md`（`moonx riantr/moonbit_static_analysis@0.1.2/src/cli`）。
+- mooncakes 技能：`src/cli/SKILL.md`（`moonx riantr/moonbit_static_analysis/src/cli`）。
 - pyroduct 是**被测对象**：本插件与分析器都不依赖它，`moonbit_gates` 只在其目录上跑门禁。

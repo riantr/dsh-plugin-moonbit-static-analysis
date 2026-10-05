@@ -1,16 +1,19 @@
 {
   "name": "@riantr/moonbit-static-analysis-dsh",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "type": "module",
-  "description": "Three-inspection (structural / type / behavior) MoonBit static analysis as DeepSeek Harness agent tools: moonbit_analyze, moonbit_audit, moonbit_gates.",
+  "description": "Three-inspection (structural / type / behavior) MoonBit static analysis as DeepSeek Harness agent tools, covering every toolchain file kind: moonbit_analyze, moonbit_analyze_file, moonbit_audit, moonbit_gates.",
   "keywords": [
     "deepseek-harness",
     "dsh-bundle",
     "moonbit",
     "static-analysis",
     "linter",
-    "state-machine"
+    "state-machine",
+    "mbti",
+    "literate-markdown",
+    "formal-verification"
   ],
   "license": "MIT",
   "author": "riantr",
@@ -37,5 +40,8 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "scripts": {
+    "test": "node test-register.mjs && node test-bridge.mjs"
   }
 }
