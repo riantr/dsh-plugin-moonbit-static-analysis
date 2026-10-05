@@ -3,6 +3,6 @@
 # jsoncli bridge; `moonPath`/`nodePath` override the resolved binaries.
 - insert:
     - id: moonbit-static-analysis
-      name: '@local/moonbit-static-analysis'
+      name: '@riantr/moonbit-static-analysis-dsh'
       config:
         projectDir: 'D:/src/DeepseekHarness/Projects/xiuyueren/StaticAnalysis/moonbit_static_analysis'

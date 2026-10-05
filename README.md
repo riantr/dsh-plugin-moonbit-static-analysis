@@ -1,6 +1,6 @@
-# dsh-plugin-moonbit-static-analysis
+# @riantr/moonbit-static-analysis-dsh
 
-DeepSeek Harness 插件包（bundle）：把 `riantr/moonbit_static_analysis` 的**三鉴（结构/类型/行为）**流水线
+DeepSeek Harness 插件包（bundle，npm `@riantr/moonbit-static-analysis-dsh`）：把 `riantr/moonbit_static_analysis` 的**三鉴（结构/类型/行为）**流水线
 以 agent 工具形式挂进当前 profile。插件本体是**生成器 + 格式化器**，不含第二套分析实现——所有分析语义
 都留在 MoonBit 侧（`src/jsoncli` 桥接程序），随模块一起版本化、跑门禁、发布。
 
@@ -26,14 +26,21 @@ config:
 
 ## 安装
 
-**方式一：GitHub 仓库（推荐）**——在任意 profile 的插件页「添加插件」输入 git 地址，或命令行：
+**方式一：npm 包（可搜索、可固定版本）**——在任意 profile 的插件页「添加插件」输入包名，或命令行：
 
 ```
-dsh plugin --profile <name> add github:riantr/dsh-plugin-moonbit-static-analysis#v0.1.2
+dsh plugin --profile <name> add @riantr/moonbit-static-analysis-dsh
+dsh plugin --profile <name> add @riantr/moonbit-static-analysis-dsh@0.1.3
+```
+
+**方式二：GitHub 仓库**——git 地址同样接受（`installBundle` 自带 GitHub 预检）：
+
+```
+dsh plugin --profile <name> add github:riantr/dsh-plugin-moonbit-static-analysis#v0.1.3
 dsh plugin --profile <name> add https://github.com/riantr/dsh-plugin-moonbit-static-analysis.git
 ```
 
-**方式二：本地目录**——在带 `plugin_manager` 工具的会话里：
+**方式三：本地目录**——在带 `plugin_manager` 工具的会话里：
 
 ```
 plugin_manager action=install_bundle target=<本目录绝对路径>
@@ -42,8 +49,17 @@ plugin_manager action=install_bundle target=<本目录绝对路径>
 或在 Web GUI 的 Plugin Manager 里选择「从目录安装 bundle」指向本目录。安装影响该 profile 的全部会话并跨重启保留；
 替换已安装包需要重启才会加载新的 JS 模块代。
 
+**配置 projectDir**：npm/git 安装后该包位于 profile 的 node_modules 内，`cordis.patch.yml` 里的
+`config.projectDir` 指向的是**开发机**的分析器检出——其他用户安装后需在插件页的配置编辑器里把它改成本地的
+`moonbit_static_analysis` 检出路径（或在该检出目录上 `moon build --target js` 生成桥，插件会自动补建）。
+本地目录安装（方式三）开箱即用。
+
 > 不要手写 profile 的 `package.json` / `cordis.patch.yml`，也不要在 profile 目录里跑 pnpm——`install_bundle`
 > 会完成这些步骤。`@deepseek-ai/dsh-tools` 随 dsh 安装解析，本包不声明依赖。
+
+## 发布
+
+npm：`npm publish`（public，scope `@riantr`；v0.1.3 起）。GitHub：master + tag v0.1.x 双同步。
 
 ## 已验证
 
