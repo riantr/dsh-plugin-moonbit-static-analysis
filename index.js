@@ -154,7 +154,7 @@ export function apply(ctx, config) {
         },
         filename: {
           type: 'string',
-          description: 'Reported file name for positions (default "main.mlang").',
+          description: 'Reported file name for positions (default "main.mbt").',
         },
       },
       output: {
@@ -174,7 +174,7 @@ export function apply(ctx, config) {
         const reply = await callBridge(
           projectDir,
           config,
-          { kind: 'program', source: args.source, filename: args.filename ?? 'main.mlang' },
+          { kind: 'program', source: args.source, filename: args.filename ?? 'main.mbt' },
           exec.signal,
         )
         return { report: reportText('program findings', reply), count: reply.count, findings: reply.findings }
