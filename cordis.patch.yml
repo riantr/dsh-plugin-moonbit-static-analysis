@@ -1,0 +1,8 @@
+# Bundle patch: mounts the moonbit_static_analysis tool plugin into the
+# current profile. `config.projectDir` is the analyzer checkout that owns the
+# jsoncli bridge; `moonPath`/`nodePath` override the resolved binaries.
+- insert:
+    - id: moonbit-static-analysis
+      name: '@local/moonbit-static-analysis'
+      config:
+        projectDir: 'D:/src/DeepseekHarness/Projects/xiuyueren/StaticAnalysis/moonbit_static_analysis'

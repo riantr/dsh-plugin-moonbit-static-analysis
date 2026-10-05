@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "MoonBit 静态分析",
+    "description": "三鉴（结构/类型/行为）静态分析，覆盖 MoonBit 子集程序与状态机表，以 agent 工具形式提供。"
+  }
+}
