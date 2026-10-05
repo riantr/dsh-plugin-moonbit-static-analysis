@@ -65,7 +65,7 @@ npm：`npm publish`（public，scope `@riantr`；v0.1.3 起）。GitHub：master
 
 - `node --check index.js` ✓
 - 以桩 `defineTool` 端到端运行 `apply()`：注册 3 个工具 ✓
-- `moonbit_analyze` 真跑：`missing(x)` → `UndefinedName` + 虚栈 `in g at main.mlang:1` ✓
+- `moonbit_analyze` 真跑：`missing(x)` → `UndefinedName` + 虚栈 `in g at main.mbt:1` ✓
 - `moonbit_audit` 真跑：歧义驱动 `('b' vs 'c')` + `step(c, act) blocks without a reason` ✓
 - `moonbit_gates suite=analyzer`：check / fmt --check / test 21/21 全 exit 0；首轮还如实报出未格式化的
   `src/jsoncli/main.mbt`（随后 `moon fmt` 修复）——失败路径同样经过验证 ✓
