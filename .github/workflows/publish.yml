@@ -91,22 +91,40 @@ jobs:
       - name: Publish to npm
         working-directory: dsh-plugin-moonbit-static-analysis
         shell: bash
-        # TODO: this is the last step that needs a long-lived secret. npm is
-        # restricting tokens that bypass 2FA -- account changes from Aug 2026 and
-        # DIRECT PUBLISHING from Jan 2027 -- so this path has an expiry date.
-        # The durable replacement is Trusted Publishing: configure the package on
-        # npmjs.com to trust this repo+workflow, delete NPM_TOKEN, and drop this
-        # env block. The id-token: write permission above is already what that
-        # needs, and --provenance is generated from the same identity.
+        # Two authentication paths, and how to tell which one is live.
+        #
+        # TOKEN PATH (default, what runs today): NODE_AUTH_TOKEN carries
+        # NPM_TOKEN. npm is restricting tokens that bypass 2FA -- account changes
+        # from Aug 2026 and direct publishing from Jan 2027 -- so this path has an
+        # expiry date.
+        #
+        # OIDC PATH: npm Trusted Publishing. npm exchanges the job's OIDC
+        # identity for publish rights itself; no secret, nothing to rotate.
+        # Migrating is NOT just deleting the secret, and this step is written so
+        # the obvious half-migration cannot happen: npm only falls back to OIDC
+        # when NODE_AUTH_TOKEN is COMPLETELY UNSET. An empty string still counts
+        # as set, so a workflow that keeps `env: NODE_AUTH_TOKEN:` after the
+        # secret is deleted would authenticate with an empty token instead of
+        # using OIDC, and fail with ENEEDAUTH while looking correctly configured.
+        # Hence the `::endgroup::` marker below: delete these two lines together.
+        # :begin_oidc_migration
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN is not set on this repository."
-            echo "npm publish cannot authenticate. Nothing was published."
+            echo "::error::NPM_TOKEN is not set and no OIDC trusted publisher is"
+            echo "configured for this package. Nothing was published."
+            echo "Either set the secret, or configure Trusted Publishing on"
+            echo "npmjs.com/package/@riantr/moonbit-static-analysis-dsh/access"
+            echo "and delete this env block (the empty-string trap is why the"
+            echo "block has to go, not just the secret)."
             exit 1
           fi
           npm publish --provenance
+        # :end_oidc_migration
+        # After migrating, the publish step becomes just:
+        #     run: npm publish --provenance
+        # with no `env:` block at all.
 
       - name: Create GitHub Release
         run: |

@@ -82,9 +82,14 @@ runs:
       run: moon build --target js
 
     - name: Install node
-      uses: actions/setup-node@v5
+      # setup-node v6 and Node 24, not v5/22: npm Trusted Publishing (OIDC)
+      # needs npm >= 11.5.1 and Node >= 22.14.0, and reports from the field say
+      # older setup-node majors do not wire the OIDC path correctly. This action
+      # also installs the node that the publish step later runs under, so the
+      # version has to be right here rather than in publish.yml alone.
+      uses: actions/setup-node@v6
       with:
-        node-version: 22
+        node-version: 24
 
     - name: Run the plugin tests
       working-directory: dsh-plugin-moonbit-static-analysis
