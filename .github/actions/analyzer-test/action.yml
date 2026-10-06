@@ -48,12 +48,15 @@ runs:
       # moonbit-community/setup-moonbit, has zero tags and zero releases, so any
       # @vN ref fails the same way; it also names its input `version`, not
       # `moon-version`.
+      #
+      # The path is install/unix.sh, not install.sh: the second run proved it by
+      # failing with curl exit 22, which is curl's code for an HTTP error.
       shell: bash
       run: |
         set -euo pipefail
-        curl -LsSf https://cli.moonbitlang.com/install.sh | bash
-        # The installer puts moon under ~/.moon/bin, which is not on a GitHub
-        # runner's PATH by default.
+        curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+        # The installer puts moon under $MOON_HOME/bin (default ~/.moon/bin),
+        # which is not on a GitHub runner's PATH by default.
         echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
         export PATH="$HOME/.moon/bin:$PATH"
         command -v moon >/dev/null || {
@@ -61,6 +64,14 @@ runs:
           exit 1
         }
         moon version --all
+
+    - name: Resolve the analyzer's registry index
+      working-directory: moonbit_static_analysis
+      shell: bash
+      # Mandatory. A fresh runner has an empty registry index and the analyzer
+      # imports moonbitlang/async from mooncakes.io, so the build below fails
+      # with "Failed to resolve registry dependency" without this.
+      run: moon update
 
     - name: Build the analyzer's JSON bridge
       working-directory: moonbit_static_analysis
