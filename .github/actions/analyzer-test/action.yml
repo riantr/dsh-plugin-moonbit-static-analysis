@@ -1,0 +1,64 @@
+# The plugin's tests are not standalone.
+#
+# Both test-register.mjs and test-bridge.mjs resolve
+#   PROJECT_DIR = path.resolve(HERE, '..', 'moonbit_static_analysis')
+# and test-bridge.mjs additionally refuses to run unless
+#   <PROJECT_DIR>/_build/js/debug/build/src/jsoncli/jsoncli.js
+# exists, i.e. the analyzer must be built with `moon build --target js` first.
+# index.js goes further and spawns the `moon` binary itself.
+#
+# So the checkout layout is part of the contract, not an accident:
+#   <workspace>/dsh-plugin-moonbit-static-analysis   <- this repo
+#   <workspace>/moonbit_static_analysis              <- the analyzer
+# and `moonbit_gates` with suite=pyroduct looks for
+#   <workspace>/pyroduct
+# which the tests never touch, so it is not checked out here.
+#
+# This composite exists so ci.yml and publish.yml cannot drift apart. They used
+# to need the same eleven steps, and a hard-coded step list is exactly the kind
+# of thing that goes stale silently: a refactor deletes a step from one file and
+# the other keeps running the old shape.
+
+name: Analyzer integration test
+description: Check out the analyzer as a sibling, build its JSON bridge, run the plugin's tool tests against it.
+
+runs:
+  using: composite
+  steps:
+    - name: Check out this plugin
+      uses: actions/checkout@v4
+      with:
+        path: dsh-plugin-moonbit-static-analysis
+
+    - name: Check out the analyzer as its sibling
+      uses: actions/checkout@v4
+      with:
+        repository: riantr/moonbit_static_analysis
+        # Default branch. This is an integration test against the analyzer's
+        # tip, so an analyzer change that breaks the bridge fails here instead
+        # of at a user's machine. Pin `ref: v0.3.4` (or whatever is published)
+        # to test a released pair instead.
+        path: moonbit_static_analysis
+
+    - name: Install moon
+      uses: moonbitlang/setup-moonbit@v0
+      with:
+        moon-version: latest
+
+    - name: Build the analyzer's JSON bridge
+      working-directory: moonbit_static_analysis
+      shell: bash
+      run: moon build --target js
+
+    - name: Install node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Run the plugin tests
+      working-directory: dsh-plugin-moonbit-static-analysis
+      shell: bash
+      # No `npm ci`: the package has no dependencies and no lockfile, so there
+      # is nothing to install and `npm ci` would only fail on the missing
+      # package-lock.json.
+      run: npm test

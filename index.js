@@ -187,7 +187,7 @@ export function apply(ctx, config) {
     defineTool({
       name: 'moonbit_analyze_file',
       description:
-        'Analyze any MoonBit toolchain file kind by extension, not just program source. Dispatch: .mbt/.mbtx (three-inspection, plus the import block for a .mbtx script), .mbt.md (literate — only the fences the toolchain compiles, i.e. mbt and mbt check; mbt nocheck and a bare moonbit are display-only and skipped, and line numbers are the .md file\'s real lines), .mbti (interface audit: malformed lines, duplicate signatures, unknown type references), .mbtp (proof-file logic lint: string constants in bodies, banned !/iff forms, cross-package calls, lemma without proof_ensure — a lint, not a substitute for moon prove). Use this for interface files, literate docs and proof files; use moonbit_analyze for plain program source.',
+        'Analyze any MoonBit toolchain file kind by extension, not just program source. Dispatch: .mbt/.mbtx (three-inspection, plus the import block for a .mbtx script), .mbt.md (literate — only the fences the toolchain actually compiles, i.e. `mbt check` / `mbt test`; `mbt nocheck` and a BARE `mbt` or `moonbit` fence are display-only and skipped, and line numbers are the .md file\'s real lines), .mbti (interface audit: malformed lines, duplicate signatures, unknown type references), .mbtp (proof-file logic lint: string constants in bodies, banned !/iff forms, cross-package calls, lemma without proof_ensure — a lint, not a substitute for moon prove). Use this for interface files, literate docs and proof files; use moonbit_analyze for plain program source.',
       parameters: {
         source: {
           type: 'string',

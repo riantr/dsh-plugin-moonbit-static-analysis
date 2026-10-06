@@ -1,0 +1,104 @@
+# Publish @riantr/moonbit-static-analysis-dsh to npm.
+#
+# This package has its own version line, independent of the MoonBit module it
+# wraps: 0.1.4 here does not have to match any moon.mod. The only coupling is
+# that the tools drive the analyzer's JSON bridge, and that is what the
+# integration test in .github/actions/analyzer-test checks on every release.
+#
+# The tests are not skipped for a release — publishing an untested plugin is how
+# a broken bridge reaches users. The test runs first and gates the publish.
+#
+# TO ENABLE: set the secret under
+#     Settings -> Secrets and variables -> Actions
+# as NPM_TOKEN, an npm automation token with publish scope. The publish step
+# fails fast when it is absent, by design; a silent skip would look like a
+# successful release.
+#
+# To cut a release:
+#   1. set version in package.json
+#   2. npm test locally (needs a sibling checkout of the analyzer, built with
+#      `moon build --target js`)
+#   3. commit, push
+#   4. git tag -a v<version> -m "..." && git push origin v<version>
+
+name: publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: package.json must agree with the tag
+        # npm publish takes the version from package.json, not from the tag. If
+        # they disagree, the tag names a release that does not exist and the
+        # already-published version number is burned.
+        run: |
+          set -euo pipefail
+          want="${GITHUB_REF_NAME#v}"
+          got=$(node -p "require('./package.json').version")
+          if [ "$got" != "$want" ]; then
+            echo "::error file=package.json::version is '$got', tag says '$want'."
+            exit 1
+          fi
+          echo "ok  package.json  version=$got"
+
+      - name: The package must not already be on npm
+        # npm would reject a duplicate version anyway, but with a much less
+        # obvious message than this one. Checking first also catches a
+        # re-tagged release before it looks like a publishing failure.
+        run: |
+          set -euo pipefail
+          v=$(node -p "require('./package.json').version")
+          if npm view "@riantr/moonbit-static-analysis-dsh@$v" version >/dev/null 2>&1; then
+            echo "::error::$v is already published on npm. Bump package.json."
+            exit 1
+          fi
+          echo "ok  $v is not on npm yet"
+
+      - name: Analyzer integration test
+        uses: ./.github/actions/analyzer-test
+
+      - name: Check what the tarball would contain
+        working-directory: dsh-plugin-moonbit-static-analysis
+        shell: bash
+        # The files whitelist in package.json is what keeps the test scripts and
+        # the analyzer out of the published tarball. `npm publish --dry-run`
+        # prints that listing, so a mistake in the whitelist shows up in this
+        # log rather than at someone's install time. Measured on 0.1.4: 7 files,
+        # 8.9 kB, no test-register/test-bridge/stub-loader.
+        run: npm publish --dry-run
+
+      - name: Publish to npm
+        working-directory: dsh-plugin-moonbit-static-analysis
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN is not set on this repository."
+            echo "npm publish cannot authenticate. Nothing was published."
+            exit 1
+          fi
+          npm publish --provenance
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "moonbit-static-analysis-dsh ${GITHUB_REF_NAME#v}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

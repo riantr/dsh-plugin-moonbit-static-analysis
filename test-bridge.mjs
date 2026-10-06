@@ -91,15 +91,28 @@ const CASES = [
     expectHas: 'string constant',
   },
   {
-    name: 'file (.mbt.md) — compiled fence reported, display-only skipped',
+    // Every block below is display-only EXCEPT the last one, and each carries a
+    // different unbound name so the assertion can tell which one was reported.
+    //
+    // This fixture used to put the live code in a bare ```mbt fence and expect it
+    // to be analysed. That is wrong, and it was wrong before this test ever ran:
+    // the analyzer classifies fences by what the toolchain actually compiles
+    // (see fence_mode in src/moonfiles/moonfiles.mbt), and the measured truth
+    // table says `mbt check` / `mbt test` are compiled while a BARE `mbt` fence
+    // is display-only, same as a bare `moonbit`. Analysing bare `mbt` produced
+    // findings on code the toolchain never builds, which is the bug that fix
+    // was for. So the case now checks the real rule in both directions: the
+    // bare `mbt` block is a negative like the other display fences, and only
+    // `mbt check` is analysed.
+    name: 'file (.mbt.md) — only the check fence is compiled and reported',
     request: {
       kind: 'file',
       filename: 'doc.mbt.md',
       source:
-        '```mbt nocheck\nfn a() -> int { gone(1) }\n```\n\n```moonbit\nfn b() -> int { gone(2) }\n```\n\n```mbt\nfn c() -> int { vanish(1) }\n```\n',
+        '```mbt nocheck\nfn a() -> int { gone(1) }\n```\n\n```moonbit\nfn b() -> int { gone(2) }\n```\n\n```mbt\nfn c() -> int { vanish(1) }\n```\n\n```mbt check\nfn d() -> int { elapse(3) }\n```\n',
     },
     expectCount: 1,
-    expectHas: 'vanish',
+    expectHas: 'elapse',
   },
   {
     name: 'file (real generated .mbti) — clean',

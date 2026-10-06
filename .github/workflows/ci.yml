@@ -1,0 +1,29 @@
+# Run the plugin's tool tests on every push and every pull request.
+#
+# The tests are integration tests: they drive the plugin's tools against the real
+# analyzer bridge, so they need the analyzer checked out as a sibling and built.
+# That whole setup lives in .github/actions/analyzer-test so this workflow and
+# publish.yml cannot drift apart.
+#
+# Before this existed the repository had no CI at all, so `npm test` only ran on
+# whoever's machine happened to have a sibling checkout of the analyzer.
+
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Checked out only so the local composite action below can be resolved by
+      # path. The composite checks the repository out again, under the name the
+      # tests expect.
+      - uses: actions/checkout@v4
+
+      - name: Analyzer integration test
+        uses: ./.github/actions/analyzer-test

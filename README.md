@@ -74,9 +74,12 @@ npm：`npm publish`（public，scope `@riantr`；v0.1.4 起，含 `moonbit_analy
   - `.mbtx`：import 块按 `"path" @alias *` 原样回显，正文缺陷同时报出 ✓
   - `.mbti`：未知类型引用报出；一份**真实生成**的 `.mbti`（含 `pub let` / `suberror` /
     `#deprecated` / `impl ... for` / `noraise cancel` / `const` / `using`）零误报 ✓
-  - `.mbt.md`：编译围栏里的未定义名报出，`mbt nocheck` 与裸 `moonbit` 展示块被跳过 ✓
+  - `.mbt.md`：只有**工具链真的编译**的围栏才分析，即 `mbt check` / `mbt test`；
+    `mbt nocheck` 与**裸 `mbt` / 裸 `moonbit`** 展示块一律跳过 ✓
+    （真值表见分析器 `fence_mode`：`moon check` 实测，不靠文档措辞。裸 `mbt`
+    展示块曾被当作活代码分析，那是在工具链从不构建的代码上报假缺陷）
 - `moonbit_audit` 真跑：歧义驱动 `('b' vs 'c')` + `step(c, act) blocks without a reason` ✓
-- `moonbit_gates suite=analyzer`：check / fmt --check / test 51/51 全 exit 0；首轮还如实报出未格式化的
+- `moonbit_gates suite=analyzer`：check / fmt --check / test 75/75 全 exit 0；首轮还如实报出未格式化的
   `src/jsoncli/main.mbt`（随后 `moon fmt` 修复）——失败路径同样经过验证 ✓
 
 ## 测试
@@ -84,6 +87,13 @@ npm：`npm publish`（public，scope `@riantr`；v0.1.4 起，含 `moonbit_analy
 ```console
 npm test        # 桩宿主跑 apply() 注册检查 + 7 条桥接往返用例
 ```
+
+> **前置：分析器必须是本仓的同级目录。** 两个测试脚本都把
+> `PROJECT_DIR` 解析成 `<本仓>/../moonbit_static_analysis`，而 `test-bridge.mjs`
+> 还要求那里已存在 `_build/js/debug/build/src/jsoncli/jsoncli.js`，
+> 也就是要先在分析器里跑过一次 `moon build --target js`。`index.js` 自己也会
+> spawn `moon` 二进制。这不是巧合，是插件与模块之间的目录约定；CI 里由
+> `.github/actions/analyzer-test` 把分析器 checkout 成同级目录来满足。
 
 `test-register.mjs` 用 `node:module` 的 resolve hook 把 `@deepseek-ai/dsh-tools` 换成
 identity 桩，于是真实的 `apply()` 能在裸 Node 里执行——注册的工具名与数量都被断言。
