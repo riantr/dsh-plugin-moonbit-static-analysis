@@ -8,11 +8,13 @@
 # The tests are not skipped for a release — publishing an untested plugin is how
 # a broken bridge reaches users. The test runs first and gates the publish.
 #
-# TO ENABLE: set the secret under
-#     Settings -> Secrets and variables -> Actions
-# as NPM_TOKEN, an npm automation token with publish scope. The publish step
-# fails fast when it is absent, by design; a silent skip would look like a
-# successful release.
+# NO SECRET IS NEEDED. Authentication is npm Trusted Publishing (OIDC):
+# configured on npmjs.com at
+#   /package/@riantr/moonbit-static-analysis-dsh/access
+# trusting riantr/dsh-plugin-moonbit-static-analysis + workflow publish.yml.
+# The job's id-token: write permission is the credential; npm exchanges it
+# itself. This replaced an NPM_TOKEN secret, which npm is phasing out for
+# direct publishing from Jan 2027.
 #
 # To cut a release:
 #   1. set version in package.json
@@ -91,40 +93,28 @@ jobs:
       - name: Publish to npm
         working-directory: dsh-plugin-moonbit-static-analysis
         shell: bash
-        # Two authentication paths, and how to tell which one is live.
+        # OIDC / Trusted Publishing. There is deliberately NO `env:` block on this
+        # step, and that absence is load-bearing: npm only falls back to the
+        # job's OIDC identity when NODE_AUTH_TOKEN is COMPLETELY UNSET. An empty
+        # string still counts as set, so keeping
         #
-        # TOKEN PATH (default, what runs today): NODE_AUTH_TOKEN carries
-        # NPM_TOKEN. npm is restricting tokens that bypass 2FA -- account changes
-        # from Aug 2026 and direct publishing from Jan 2027 -- so this path has an
-        # expiry date.
+        #     env:
+        #       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         #
-        # OIDC PATH: npm Trusted Publishing. npm exchanges the job's OIDC
-        # identity for publish rights itself; no secret, nothing to rotate.
-        # Migrating is NOT just deleting the secret, and this step is written so
-        # the obvious half-migration cannot happen: npm only falls back to OIDC
-        # when NODE_AUTH_TOKEN is COMPLETELY UNSET. An empty string still counts
-        # as set, so a workflow that keeps `env: NODE_AUTH_TOKEN:` after the
-        # secret is deleted would authenticate with an empty token instead of
-        # using OIDC, and fail with ENEEDAUTH while looking correctly configured.
-        # Hence the `::endgroup::` marker below: delete these two lines together.
-        # :begin_oidc_migration
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "::error::NPM_TOKEN is not set and no OIDC trusted publisher is"
-            echo "configured for this package. Nothing was published."
-            echo "Either set the secret, or configure Trusted Publishing on"
-            echo "npmjs.com/package/@riantr/moonbit-static-analysis-dsh/access"
-            echo "and delete this env block (the empty-string trap is why the"
-            echo "block has to go, not just the secret)."
-            exit 1
-          fi
-          npm publish --provenance
-        # :end_oidc_migration
-        # After migrating, the publish step becomes just:
-        #     run: npm publish --provenance
-        # with no `env:` block at all.
+        # around after deleting the secret would authenticate with an empty token
+        # and fail ENEEDAUTH while the workflow looks correctly configured. If you
+        # ever have to go back to a token, put the whole env block back, not just
+        # the secret.
+        #
+        # Configured on npmjs.com at
+        #   /package/@riantr/moonbit-static-analysis-dsh/access
+        # as repo riantr/dsh-plugin-moonbit-static-analysis, workflow publish.yml
+        # (filename only, case-sensitive), allowed actions: npm publish.
+        # Requirements it depends on, all present above: id-token: write,
+        # setup-node v6 with Node 24, and a public repository whose
+        # package.json repository.url matches this repo -- provenance is refused
+        # otherwise.
+        run: npm publish --provenance
 
       - name: Create GitHub Release
         run: |
