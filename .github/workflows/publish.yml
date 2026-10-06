@@ -30,6 +30,12 @@ on:
 
 permissions:
   contents: write
+  # Required by `npm publish --provenance` below. npm's provenance is a signed
+  # attestation built from the workflow's OIDC identity token, so without
+  # id-token: write the publish fails at the attestation step. It is scoped to
+  # this job only, and it is the same identity npm's Trusted Publishing uses --
+  # see the note on the publish step about moving off NPM_TOKEN entirely.
+  id-token: write
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -85,6 +91,13 @@ jobs:
       - name: Publish to npm
         working-directory: dsh-plugin-moonbit-static-analysis
         shell: bash
+        # TODO: this is the last step that needs a long-lived secret. npm is
+        # restricting tokens that bypass 2FA -- account changes from Aug 2026 and
+        # DIRECT PUBLISHING from Jan 2027 -- so this path has an expiry date.
+        # The durable replacement is Trusted Publishing: configure the package on
+        # npmjs.com to trust this repo+workflow, delete NPM_TOKEN, and drop this
+        # env block. The id-token: write permission above is already what that
+        # needs, and --provenance is generated from the same identity.
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
