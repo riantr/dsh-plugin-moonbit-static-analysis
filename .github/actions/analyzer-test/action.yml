@@ -26,12 +26,12 @@ runs:
   using: composite
   steps:
     - name: Check out this plugin
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         path: dsh-plugin-moonbit-static-analysis
 
     - name: Check out the analyzer as its sibling
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: riantr/moonbit_static_analysis
         # Default branch. This is an integration test against the analyzer's
@@ -41,17 +41,37 @@ runs:
         path: moonbit_static_analysis
 
     - name: Install moon
-      uses: moonbitlang/setup-moonbit@v0
-      with:
-        moon-version: latest
+      # The official install script, not a setup action. moonbitlang/setup-moonbit
+      # does not exist -- GitHub reports "Unable to resolve action
+      # moonbitlang/setup-moonbit, repository not found", and it is what failed
+      # the first run of this workflow. The near-miss replacement,
+      # moonbit-community/setup-moonbit, has zero tags and zero releases, so any
+      # @vN ref fails the same way; it also names its input `version`, not
+      # `moon-version`.
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl -LsSf https://cli.moonbitlang.com/install.sh | bash
+        # The installer puts moon under ~/.moon/bin, which is not on a GitHub
+        # runner's PATH by default.
+        echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+        export PATH="$HOME/.moon/bin:$PATH"
+        command -v moon >/dev/null || {
+          echo "::error::moon is still not on PATH after the install script"
+          exit 1
+        }
+        moon version --all
 
     - name: Build the analyzer's JSON bridge
       working-directory: moonbit_static_analysis
       shell: bash
+      # No --release: the tests read _build/js/debug/build/src/jsoncli/jsoncli.js,
+      # and debug is moon's default profile (only --release moves the output to
+      # _build/js/release/).
       run: moon build --target js
 
     - name: Install node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: 22
 

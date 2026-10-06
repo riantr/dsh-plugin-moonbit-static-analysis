@@ -23,7 +23,7 @@ jobs:
       # Checked out only so the local composite action below can be resolved by
       # path. The composite checks the repository out again, under the name the
       # tests expect.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Analyzer integration test
         uses: ./.github/actions/analyzer-test
